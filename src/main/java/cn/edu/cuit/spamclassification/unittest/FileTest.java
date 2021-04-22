@@ -1,6 +1,8 @@
 package cn.edu.cuit.spamclassification.unittest;
 
+import cn.edu.cuit.spamclassification.excutor.MySpamTrainSVMWithSGD;
 import cn.edu.cuit.spamclassification.excutor.SpamPredict;
+import cn.edu.cuit.spamclassification.excutor.SpamPredictSVMWithSGD;
 import cn.edu.cuit.spamclassification.excutor.SpamPredict_Simhash;
 import cn.edu.cuit.spamclassification.utils.HanlpProcess;
 import cn.edu.cuit.spamclassification.utils.ProcessFile;
@@ -85,7 +87,12 @@ public class FileTest {
 
     @Test
     void fileCheckTest(){
-        SpamPredict.fileCheck();
+        SpamPredictSVMWithSGD.fileCheck();
+    }
+
+    @Test
+    void simhashTest(){
+        SpamPredict_Simhash.fileCheck();
     }
 
 

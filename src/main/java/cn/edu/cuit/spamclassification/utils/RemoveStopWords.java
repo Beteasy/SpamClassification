@@ -66,6 +66,11 @@ public static ArrayList<ArrayList<String>> getKeyWordsList(ArrayList<ArrayList<S
 //            System.out.println(wordsList.get(i));
             wordsList.get(i).removeAll(stopWordsList);
 //            System.out.println(wordsList.get(i));
+            for (int j=0; j<wordsList.get(i).size();j++){
+                if (wordsList.get(i).get(j).length()<2){
+                    wordsList.get(i).remove(wordsList.get(i).get(j));
+                }
+            }
         }
         //wordsList.removeAll(stopWordsList);
     } catch (Exception e) {

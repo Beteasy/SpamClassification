@@ -34,8 +34,9 @@ public class SpamPredict {
 
     public static final String FULL_PATH = "E:\\FinalProject\\datasets\\trec06c\\full\\index_pre";
     public static final String DATA_PRE_PATH = "E:\\FinalProject\\datasets\\trec06c";
-    public static final String MODEL_PATH = "E:\\FinalProject\\models\\withTFIDF";
+//    public static final String MODEL_PATH = "E:\\FinalProject\\models\\withTFIDF";
 //public static final String MODEL_PATH = "E:\\FinalProject\\models\\frequency";
+public static final String MODEL_PATH = "E:\\FinalProject\\models\\frequency";
     public static final String TOP200_PATH  = "E:\\FinalProject\\datasets\\trec06c\\spam_java.txt";
     //the number of spam used for predicting
     public static final Integer SPAM_NUM_PREDICT = 3000;

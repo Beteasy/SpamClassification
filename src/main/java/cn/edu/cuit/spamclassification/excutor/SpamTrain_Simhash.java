@@ -1,6 +1,7 @@
 package cn.edu.cuit.spamclassification.excutor;
 
 import cn.edu.cuit.spamclassification.utils.HanlpProcess;
+import cn.edu.cuit.spamclassification.utils.MyTFIDF;
 import cn.edu.cuit.spamclassification.utils.ProcessFile;
 import cn.edu.cuit.spamclassification.utils.RemoveStopWords;
 import org.apache.spark.SparkConf;
@@ -14,13 +15,13 @@ import org.apache.spark.mllib.classification.NaiveBayesModel;
 import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.rdd.RDD;
+import org.omg.CORBA.PUBLIC_MEMBER;
 import scala.Tuple2;
+import sun.security.pkcs11.P11Util;
 
 import java.io.FileNotFoundException;
 import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @ClassName Excutor
@@ -33,10 +34,15 @@ public class SpamTrain_Simhash {
     //fowling two paths need to be modified if run on linux
     public static final String FULL_PATH = "E:\\FinalProject\\datasets\\trec06c\\full\\index_train";
     public static final String DATA_PRE_PATH = "E:\\FinalProject\\datasets\\trec06c";
+    public static final String MODEL_PATH = "E:\\FinalProject\\models\\WithSimhash";
+    public static final String TOP200_PATH  = "E:\\FinalProject\\datasets\\trec06c\\spam_java.txt";
+    public static final String SPAM1OO_PATH = "E:\\FinalProject\\datasets\\trec06c\\spamTop100.txt";
+    public static final String HAM100_PATH  = "E:\\FinalProject\\datasets\\trec06c\\hamTop100.txt";
     //the number of spam used for training
     public static final Integer SPAM_NUM_TRAIN = 3000;
     //the number of ham used for training
     public static final Integer HAM_NUM_TRAIN = 3000;
+    public static final Integer FEATURE_NUM = 100;
 
 
 
@@ -137,13 +143,9 @@ public class SpamTrain_Simhash {
 
         // 对分词列表进行词频统计获取TOP100数据
         System.out.println("**********************获取TOP100********************");
-        List<String> spamTop100 = getTop100(keySpamWords, jsc);
-        List<String> hamTop100 = getTop100(keyHamWords, jsc);
-        /*****************************************************/
-//        System.out.println("/*******************top100**********************************/");
-//        System.out.println("spamTop100"+spamTop100);
-////        System.out.println(spamTop100.remove("的"));
-//        System.out.println("hamTop100"+hamTop100);
+        List<String> spamTop100 = getTop100(keySpamWords);
+        List<String> hamTop100 = getTop100(keyHamWords);
+
 
         //对垃圾邮件特征词进行持久化，用于simhash判断
         String keySpamStr = "";
@@ -152,7 +154,7 @@ public class SpamTrain_Simhash {
         }
         PrintWriter printWriter = null;
         try {
-            printWriter = new PrintWriter("E:\\FinalProject\\datasets\\trec06c\\spamTop100.txt");
+            printWriter = new PrintWriter(SPAM1OO_PATH);
             printWriter.write(keySpamStr);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -166,7 +168,7 @@ public class SpamTrain_Simhash {
             keyHamStr += word +",";
         }
         try {
-            printWriter = new PrintWriter("E:\\FinalProject\\datasets\\trec06c\\hamTop100.txt");
+            printWriter = new PrintWriter(HAM100_PATH);
             printWriter.write(keyHamStr);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -193,7 +195,7 @@ public class SpamTrain_Simhash {
         System.out.println("**********************持久化TOP200********************");
 //        PrintWriter printWriter = null;
         try {
-            printWriter = new PrintWriter("E:\\FinalProject\\datasets\\trec06c\\spam_java.txt");
+            printWriter = new PrintWriter(TOP200_PATH);
             printWriter.write(keyWordStr);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -222,80 +224,31 @@ public class SpamTrain_Simhash {
 //            model.save(jsc.sc(),"E:\\FinalProject\\datasets\\trec06c\\model\\model_java");
 //        }
         System.out.println("**********************持久化模型********************");
-        String modelPath = "E:\\FinalProject\\datasets\\trec06c\\model";
-        model.save(jsc.sc(),modelPath);
+        model.save(jsc.sc(),MODEL_PATH);
 
     }
 
     /*****************get Top100 keywords******************************/
-    public static List<String> getTop100(ArrayList<ArrayList<String>> keywordList, JavaSparkContext jsc){
-        //获取top15
-        ArrayList<List<Tuple2<String,Integer>>> top15List = new ArrayList<List<Tuple2<String,Integer>>>();
-        for (ArrayList<String> s: keywordList){
-            //将email分词列表转化为javaRDD
-            JavaRDD<String> emailRDD = jsc.parallelize(s);
-            //映射为元组
-            //聚合
-            //降序排列
-            //获取top15热词列表
-            List<Tuple2<String, Integer>> metaList  = emailRDD.mapToPair(new PairFunction<String, String, Integer>() {
-                @Override
-                public Tuple2<String, Integer> call(String s) throws Exception {
-                    return new Tuple2<String,Integer>(s,1);
-                }
-            }).reduceByKey(new Function2<Integer, Integer, Integer>() {
-                @Override
-                public Integer call(Integer integer, Integer integer2) throws Exception {
-                    return integer+integer2;
-                }
-            }).mapToPair(new PairFunction<Tuple2<String, Integer>, Integer, String>() {
-                @Override
-                public Tuple2<Integer, String> call(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
-                    return new Tuple2<Integer,String>(stringIntegerTuple2._2(),stringIntegerTuple2._1());
-                }
-            }).sortByKey(false).mapToPair(new PairFunction<Tuple2<Integer, String>, String, Integer>() {
-                @Override
-                public Tuple2<String, Integer> call(Tuple2<Integer, String> integerStringTuple2) throws Exception {
-                    return new Tuple2<String,Integer>(integerStringTuple2._2(), integerStringTuple2._1());
-                }
-            }).take(15);
-            top15List.add(metaList);
+    public static List<String> getTop100(ArrayList<ArrayList<String>> keywordList){
+        Map<String, Float> tf = MyTFIDF.tfCalculate(keywordList);
+        List<Map.Entry<String, Float>> list = new ArrayList<Map.Entry<String, Float>>(tf.entrySet());
+        Collections.sort(list, new Comparator<Map.Entry<String, Float>>() {
+            @Override
+            public int compare(Map.Entry<String, Float> o1, Map.Entry<String, Float> o2) {
+                return o2.getValue().compareTo(o1.getValue());
+            }
+        });
+        System.out.println(list);
+        List<String> listTop100 = new ArrayList<>();
+        //选100个TF最大的出来
+        for(Map.Entry<String,Float> m : list){
+//            System.out.println(m.getKey()+"="+m.getValue());
+            listTop100.add(m.getKey());
+            if (listTop100.size()==FEATURE_NUM){
+                break;
+            }
         }
-        //汇总top15为top100
-        ArrayList<Tuple2<String,Integer>> allTuple = new ArrayList<Tuple2<String,Integer>>();
-        for (List<Tuple2<String,Integer>> list1: top15List){
-            allTuple.addAll(list1);
-        }
-
-        //将所有元组列表转化为javaRDD
-        JavaRDD<Tuple2<String,Integer>> allJRDD = jsc.parallelize(allTuple);
-        // 映射
-        // 聚合
-        // 降序
-        // 获取TOP100热词列表
-        List<String> top100List = allJRDD.mapToPair(new PairFunction<Tuple2<String, Integer>, String, Integer>() {
-            @Override
-            public Tuple2<String, Integer> call(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
-                return new Tuple2<String,Integer>(stringIntegerTuple2._1(),stringIntegerTuple2._2());
-            }
-        }).reduceByKey(new Function2<Integer, Integer, Integer>() {
-            @Override
-            public Integer call(Integer integer, Integer integer2) throws Exception {
-                return integer+integer2;
-            }
-        }).mapToPair(new PairFunction<Tuple2<String, Integer>, Integer, String>() {
-            @Override
-            public Tuple2<Integer, String> call(Tuple2<String, Integer> stringIntegerTuple2) throws Exception {
-                return new Tuple2<Integer,String>(stringIntegerTuple2._2(),stringIntegerTuple2._1());
-            }
-        }).sortByKey(false).map(new Function<Tuple2<Integer, String>, String>() {
-            @Override
-            public String call(Tuple2<Integer, String> integerStringTuple2) throws Exception {
-                return integerStringTuple2._2();
-            }
-        }).take(100);
-
-        return top100List;
+        return listTop100;
     }
 
     /**

@@ -2,11 +2,11 @@ package cn.edu.cuit.spamclassification.excutor;
 
 import cn.edu.cuit.spamclassification.utils.HanlpProcess;
 import cn.edu.cuit.spamclassification.utils.ProcessFile;
-import cn.edu.cuit.spamclassification.utils.RemoveStopWords;
-import cn.edu.cuit.spamclassification.utils.SimHash;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
 import org.apache.spark.mllib.classification.NaiveBayesModel;
+import org.apache.spark.mllib.classification.SVMModel;
+import org.apache.spark.mllib.classification.SVMWithSGD;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.regression.LabeledPoint;
@@ -16,7 +16,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
-import java.math.BigInteger;
 import java.math.RoundingMode;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -30,18 +29,19 @@ import java.util.Map;
  * @Author 21971
  * @Date 2021/2/12 14:19
  */
-public class SpamPredict_Simhash {
+public class SpamPredictSVMWithSGD {
 
     public static final String FULL_PATH = "E:\\FinalProject\\datasets\\trec06c\\full\\index_pre";
     public static final String DATA_PRE_PATH = "E:\\FinalProject\\datasets\\trec06c";
-    //the number of spam used for predicting
-    public static final Integer SPAM_NUM_PREDICT = 100;
-    //the number of ham used for predicting
-    public static final Integer HAM_NUM_PREDICT = 100;
-    public static final String MODEL_PATH = "E:\\FinalProject\\models\\WithSimhash";
+//    public static final String MODEL_PATH = "E:\\FinalProject\\models\\withTFIDF";
+//public static final String MODEL_PATH = "E:\\FinalProject\\models\\frequency";
+public static final String MODEL_PATH = "E:\\FinalProject\\models\\SVMWithSGD";
     public static final String TOP200_PATH  = "E:\\FinalProject\\datasets\\trec06c\\spam_java.txt";
-    public static final String SPAM1OO_PATH = "E:\\FinalProject\\datasets\\trec06c\\spamTop100.txt";
-    public static final String HAM100_PATH  = "E:\\FinalProject\\datasets\\trec06c\\hamTop100.txt";
+    //the number of spam used for predicting
+    public static final Integer SPAM_NUM_PREDICT = 3000;
+    //the number of ham used for predicting
+    public static final Integer HAM_NUM_PREDICT = 3000;
+    //the number of features
     public static final Integer FEATURE_NUM = 100;
 
 
@@ -215,117 +215,8 @@ public class SpamPredict_Simhash {
         }finally {
         }
         result = stringBuffer.toString();
-
-        //读取spamTop100
-        try {
-            file = new File(SPAM1OO_PATH);
-            fileInputStream = new FileInputStream(file);
-            inputStreamReader = new InputStreamReader(fileInputStream);
-            bufferedReader = new BufferedReader(inputStreamReader);
-            String tmp = "";
-            stringBuffer.delete(0,stringBuffer.length()-1);
-            while ((tmp = bufferedReader.readLine()) != null) {
-                stringBuffer.append(tmp);
-            }
-            bufferedReader.close();
-        }catch (Exception e){
-            e.printStackTrace();
-        }finally {
-        }
-        String spamStr =stringBuffer.toString();
-
-        //读取hamTop100
-        try {
-            file = new File(HAM100_PATH);
-            fileInputStream = new FileInputStream(file);
-            inputStreamReader = new InputStreamReader(fileInputStream);
-            bufferedReader = new BufferedReader(inputStreamReader);
-            String tmp = "";
-            stringBuffer.delete(0,stringBuffer.length()-1);
-            while ((tmp = bufferedReader.readLine()) != null) {
-                stringBuffer.append(tmp);
-            }
-            bufferedReader.close();
-        }catch (Exception e){
-            e.printStackTrace();
-        }finally {
-        }
-        String hamStr =stringBuffer.toString();
-
         //对top转化为列表
-//        List<String> keyList = Arrays.asList(result.split(","));
         List<String> keyList = Arrays.asList(result.split(","));
-        ArrayList<String> keyArrList = new ArrayList<>(keyList);
-
-        List<String> spamList = Arrays.asList(spamStr.split(","));
-        ArrayList<String> spamArrList = new ArrayList<>(spamList);
-
-        List<String> hamList = Arrays.asList(hamStr.split(","));
-        ArrayList<String> hamArrList = new ArrayList<>(hamList);
-
-
-
-        /**********************预测邮件预处理******************************************/
-        //分词
-        ArrayList<ArrayList<String>> spamWordsList = new ArrayList<ArrayList<String>>();
-        ArrayList<ArrayList<String>> hamWordsList = new ArrayList<ArrayList<String>>();
-        spamWordsList = HanlpProcess.cutWords(spamMailList);
-//        System.out.println(spamWordsList.contains("推广"));
-        hamWordsList = HanlpProcess.cutWords(hamMailList);
-        /*******************去除停用词*************************************/
-        ArrayList<ArrayList<String>> keySpamWords = new ArrayList<ArrayList<String>>();
-        ArrayList<ArrayList<String>> keyHamWords = new ArrayList<ArrayList<String>>();
-        keySpamWords = RemoveStopWords.getKeyWordsList(spamWordsList);
-        keyHamWords = RemoveStopWords.getKeyWordsList(hamWordsList);
-        //先进行simhash过滤，如果可以判定为垃圾邮件，则直接给出结果，如果不能判定为垃圾邮件，则进入到贝叶斯分类器模块中
-//        SimHash spamSimHash = new SimHash(spamArrList, 64);
-//        String spamStrHash = spamSimHash.strSimHash;
-        //利用simhash算法对每一封邮件进行判别
-        int distance = -1;
-//        for (ArrayList<String> list:keySpamWords){
-//            System.out.println("********该邮件为垃圾邮件************");
-//            SimHash simHash = new SimHash(list,64);
-//            distance = keyListSimHash.hammingDistance(simHash);
-//            System.out.println("与特征向量的海明距离 = "  + distance);
-//        }
-
-        //利用simhash算法对正常邮件进行判别
-        System.out.println("********正常邮件匹配正常特征词************");
-        SimHash hamKeyHash = new SimHash(hamArrList, 64);
-        for (ArrayList<String> list:keyHamWords){
-            SimHash simHash = new SimHash(list,64);
-            distance = hamKeyHash.hammingDistance(simHash);
-            System.out.println("正常邮件与正常特征向量的海明距离 = "  + distance);
-        }
-//        //利用simhash算法对正常邮件进行判别
-//        System.out.println("********正常邮件匹配垃圾特征词************");
-//        SimHash spamKeyHash = new SimHash(spamArrList, 64);
-//        for (ArrayList<String> list:keyHamWords){
-//            SimHash simHash = new SimHash(list,64);
-//            distance = spamKeyHash.hammingDistance(simHash);
-//            System.out.println("正常邮件与垃圾特征向量的海明距离 = "  + distance);
-//        }
-//        //利用simhash算法对垃圾邮件进行判别
-//        System.out.println("********垃圾邮件匹配垃圾特征词************");
-//        for (ArrayList<String> list:keySpamWords){
-//            SimHash simHash = new SimHash(list,64);
-//            distance = spamKeyHash.hammingDistance(simHash);
-//            System.out.println("垃圾邮件与垃圾特征向量的海明距离 = "  + distance);
-//        }
-//        //利用simhash算法对垃圾邮件进行判别
-//        System.out.println("********垃圾邮件匹配正常特征词************");
-//        for (ArrayList<String> list:keySpamWords){
-//            SimHash simHash = new SimHash(list,64);
-//            distance = hamKeyHash.hammingDistance(simHash);
-//            System.out.println("垃圾邮件与正常特征向量的海明距离 = "  + distance);
-//        }
-        int flag = 1;
-        if (flag == 1){
-            return;
-        }
-
-
-        //        System.out.println(keyArrList);
         //通过元数据列表与TOP200列表数据对比生成特征值列表
         System.out.println("*********************正在生成特征值列表*********************");
         ArrayList<double[]> spamNumList = getCharacter(spamMailList, keyList);
@@ -349,7 +240,8 @@ public class SpamPredict_Simhash {
         RDD<LabeledPoint> labeledPointRDD = javaSparkContext.parallelize(labeledPoints).rdd();
         //加载持久化的训练模型
         System.out.println("********************正在加载模型************************");
-        NaiveBayesModel naiveBayesModel = NaiveBayesModel.load(javaSparkContext.sc(), "E:\\FinalProject\\datasets\\trec06c\\model");
+//        NaiveBayesModel naiveBayesModel = NaiveBayesModel.load(javaSparkContext.sc(), MODEL_PATH);
+        SVMModel model = SVMModel.load(javaSparkContext.sc(), MODEL_PATH);
         //通过模型对每一封email特征值列表进行预测
         int index = 0;
         int wrong = 0;
@@ -358,7 +250,7 @@ public class SpamPredict_Simhash {
         int TN = 0;
         int FN = 0;
         for (LabeledPoint labeledPoint:labeledPoints){
-            double predictValue = naiveBayesModel.predict(labeledPoint.features());
+            double predictValue = model.predict(labeledPoint.features());
             System.out.println("预测文件名为："+fileNameList[index++]);
             System.out.println("准确值:"+labeledPoint.label()+"\t预测值:"+predictValue);
             if (labeledPoint.label() == 1.0 && predictValue == 1.0){
@@ -432,7 +324,7 @@ public class SpamPredict_Simhash {
         for (ArrayList<String> eachMail:cutList){
             System.out.println("********正在对第"+(i++)+"封邮件生成特征值列表*********");
             System.out.println(eachMail);
-            double[] keyNum = new double[200];
+            double[] keyNum = new double[2*FEATURE_NUM];
             for (String s:eachMail){
                 if (keyList.contains(s)){
                     int index = keyList.indexOf(s);
