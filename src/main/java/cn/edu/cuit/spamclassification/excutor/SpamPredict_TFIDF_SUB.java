@@ -4,20 +4,17 @@ import cn.edu.cuit.spamclassification.utils.HanlpProcess;
 import cn.edu.cuit.spamclassification.utils.ProcessFile;
 import org.apache.spark.SparkConf;
 import org.apache.spark.api.java.JavaSparkContext;
-import org.apache.spark.ml.classification.NaiveBayes;
 import org.apache.spark.mllib.classification.NaiveBayesModel;
 import org.apache.spark.mllib.linalg.Vector;
 import org.apache.spark.mllib.linalg.Vectors;
 import org.apache.spark.mllib.regression.LabeledPoint;
 import org.apache.spark.rdd.RDD;
 
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.math.RoundingMode;
-import java.security.SecureRandom;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -26,17 +23,17 @@ import java.util.Map;
 
 /**
  * @ClassName SpamPredict
- * @Description TODO 进行邮件预测
+ * @Description TODO 进行邮件预测——使用TF-IDF作差的优化方法
  * @Author 21971
  * @Date 2021/2/12 14:19
  */
-public class SpamPredict {
+public class SpamPredict_TFIDF_SUB {
 
     public static final String FULL_PATH = "E:\\FinalProject\\datasets\\trec06c\\full\\index_pre";
     public static final String DATA_PRE_PATH = "E:\\FinalProject\\datasets\\trec06c";
 //    public static final String MODEL_PATH = "E:\\FinalProject\\models\\withTFIDF";
 //public static final String MODEL_PATH = "E:\\FinalProject\\models\\frequency";
-public static final String MODEL_PATH = "E:\\FinalProject\\models\\frequency";
+public static final String MODEL_PATH = "E:\\FinalProject\\models\\SpamTrain_TFIDF_SUB";
     public static final String TOP200_PATH  = "E:\\FinalProject\\datasets\\trec06c\\spam_java.txt";
     //the number of spam used for predicting
     public static final Integer SPAM_NUM_PREDICT = 3000;
@@ -292,8 +289,11 @@ public static final String MODEL_PATH = "E:\\FinalProject\\models\\frequency";
         System.out.println("FN = "+FN);
         System.out.println("查准率 = "+decimalFormat.format(((double)TP/(TP+FP)) ));
         System.out.println("召回率 = "+decimalFormat.format(((double)TP/(TP+FN))));
-
-        System.out.println("======================");
+        double precision = (double)TP/(TP+FP);
+        double recall = (double)TP/(TP+FN);
+        double F1 = (2*precision*recall)/(precision+recall);
+        System.out.println("F1 = "+F1);
+        System.out.println("==========程序结束============");
 
 
     }

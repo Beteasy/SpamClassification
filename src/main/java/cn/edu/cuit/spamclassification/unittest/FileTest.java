@@ -1,18 +1,9 @@
 package cn.edu.cuit.spamclassification.unittest;
 
-import cn.edu.cuit.spamclassification.excutor.MySpamTrainSVMWithSGD;
-import cn.edu.cuit.spamclassification.excutor.SpamPredict;
-import cn.edu.cuit.spamclassification.excutor.SpamPredictSVMWithSGD;
-import cn.edu.cuit.spamclassification.excutor.SpamPredict_Simhash;
-import cn.edu.cuit.spamclassification.utils.HanlpProcess;
+import cn.edu.cuit.spamclassification.excutor.*;
 import cn.edu.cuit.spamclassification.utils.ProcessFile;
-import cn.edu.cuit.spamclassification.utils.RemoveStopWords;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -69,7 +60,7 @@ public class FileTest {
                 "a touch of her fan on my cheek; could I not understand！ Was I still such a child， Must I be broken more harshly in to learn to give place! That was all.\n" +
                 "還如一夢中彭游\n" +
                 "能解连环";
-        SpamPredict.textCheck(email);
+        SpamPredict_Frequency.textCheck(email);
     }
 
 
@@ -95,5 +86,19 @@ public class FileTest {
         SpamPredict_Simhash.fileCheck();
     }
 
+    @Test
+    void SpamPredict_TFIDF_SUB_Test(){
+        SpamPredict_TFIDF_SUB.fileCheck();
+    }
+
+    @Test
+    void SpamPredict_frequency(){
+        SpamPredict_Frequency.fileCheck();
+    }
+
+    @Test
+    void SpamPredict_TFIDF(){
+        SpamPredict_TFIDF.fileCheck();
+    }
 
 }
